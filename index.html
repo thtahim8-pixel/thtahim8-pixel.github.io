@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tamijul Hossain Tahim — Web Developer, UI/UX & Graphic Designer</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Source+Serif+4:ital,wght@0,400;1,400&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 <nav><div class="wrap">
   <b>T H Tahim</b>
-  <a href="#home">Home</a><a href="#about">About</a><a href="#education">Education</a><a href="#skills">Skills</a><a href="#services">Services</a><a href="#projects">Projects</a><a href="#contact">Contact</a><a class="btn fill sm" href="#contact">Hire Me</a>
+  <a href="#home">Home</a><a href="#about">About</a><a href="#education">Education</a><a href="#skills">Skills</a><a href="#services">Services</a><a href="#projects">Projects</a><a href="#software">Software</a><a href="#contact">Contact</a><a class="btn fill sm" href="#contact">Hire Me</a>
 </div></nav>
 
 <main class="wrap">
@@ -82,6 +82,18 @@
     </ul>
   </section>
 
+  <section id="software">
+    <h2>Software</h2>
+    <p class="swintro">Free software and tools. Click Download to get them.</p>
+    <form id="swform" class="adminonly">
+      <label class="f">Software name<input id="swn" required></label>
+      <label class="f">Short description<input id="swd"></label>
+      <label class="f">File<input id="swf" type="file" required></label>
+      <button class="btn fill" type="submit" id="swb">Upload software</button>
+    </form>
+    <ul class="sw" id="swlist"></ul>
+  </section>
+
   <section id="contact">
     <h2>Let's work together</h2>
     <div class="cgrid">
@@ -108,7 +120,7 @@
   </section>
 </main>
 
-<footer><div class="wrap">© 2026 Tamijul Hossain Tahim. All Rights Reserved.<br>Designed &amp; Developed by T H Tahim. <a href="#" id="adm" style="color:#777;font-size:.8rem;margin-left:.5rem">Admin</a></div></footer>
+<footer><div class="wrap">© 2026 Tamijul Hossain Tahim. All Rights Reserved.<br>Designed &amp; Developed by T H Tahim. <br><a href="#" id="adm" style="color:#ff6a00;font-weight:700;font-size:1rem">Admin</a></div></footer>
 
 <!-- Project page (opens on top of the site when you click a project's "Add image" box) -->
 <div class="pview" id="pview" hidden>
@@ -233,7 +245,7 @@ function showCovers(){
 var dlg=document.getElementById("login"),adm=document.getElementById("adm");
 function setAdmin(v){
   isAdmin=v;document.body.classList.toggle("admin",v);
-  adm.textContent=v?"Logout":"Admin";showCovers();
+  adm.textContent=v?"Logout":"Admin";showCovers();renderSW();
 }
 adm.addEventListener("click",async function(e){
   e.preventDefault();if(!sb)return alert("Supabase is not set up yet.");
@@ -250,6 +262,60 @@ if(sb){
   sb.auth.onAuthStateChange(function(_e,session){setAdmin(!!session);});
 }
 loadAll().then(function(){showCovers();route();});
+loadSW();
+
+
+// ---- software downloads (you upload, everyone downloads) ----
+var SWB="software-files",swRows=[];
+function fmtSize(b){if(!b)return "";if(b<1048576)return Math.round(b/1024)+" KB";return (b/1048576).toFixed(1)+" MB";}
+async function loadSW(){
+  if(!sb)return;
+  try{var r=await sb.from("software").select("*").order("id",{ascending:false});swRows=r.data||[];}catch(e){}
+  renderSW();
+}
+function renderSW(){
+  var ul=document.getElementById("swlist");if(!ul)return;
+  ul.innerHTML="";
+  if(!swRows.length){var e=document.createElement("li");e.className="swempty";e.textContent="Software coming soon.";ul.appendChild(e);return;}
+  swRows.forEach(function(row){
+    var li=document.createElement("li");
+    var box=document.createElement("div");
+    var h=document.createElement("h3");h.textContent=row.name;
+    var p=document.createElement("p");p.textContent=(row.description||"")+(row.size?" ("+fmtSize(row.size)+")":"");
+    box.appendChild(h);box.appendChild(p);
+    var acts=document.createElement("div");acts.className="swacts";
+    var d=document.createElement("a");d.className="btn fill sm";d.textContent="Download";
+    d.href=sb.storage.from(SWB).getPublicUrl(row.path,{download:row.filename}).data.publicUrl;
+    acts.appendChild(d);
+    if(isAdmin){
+      var x=document.createElement("button");x.type="button";x.className="btn sm";x.textContent="Delete";
+      x.addEventListener("click",async function(){
+        if(!confirm("Delete "+row.name+"?"))return;
+        await sb.storage.from(SWB).remove([row.path]);
+        await sb.from("software").delete().eq("id",row.id);
+        loadSW();
+      });
+      acts.appendChild(x);
+    }
+    li.appendChild(box);li.appendChild(acts);ul.appendChild(li);
+  });
+}
+document.getElementById("swform").addEventListener("submit",async function(e){
+  e.preventDefault();
+  if(!isAdmin||!sb)return;
+  var f=document.getElementById("swf").files[0];if(!f)return;
+  var btn=document.getElementById("swb");btn.disabled=true;btn.textContent="Uploading...";
+  var safe=f.name.replace(/[^A-Za-z0-9._-]/g,"_");
+  var path=Date.now()+"-"+Math.random().toString(36).slice(2,8)+"-"+safe;
+  var up=await sb.storage.from(SWB).upload(path,f,{contentType:f.type||"application/octet-stream"});
+  if(up.error){alert("Upload failed: "+up.error.message);}
+  else{
+    var ins=await sb.from("software").insert({name:document.getElementById("swn").value,description:document.getElementById("swd").value,path:path,filename:f.name,size:f.size});
+    if(ins.error){alert("Save failed: "+ins.error.message);}
+    else{e.target.reset();await loadSW();}
+  }
+  btn.disabled=false;btn.textContent="Upload software";
+});
 
 // contact form opens the visitor's email app
 document.getElementById("msg").addEventListener("submit",function(e){e.preventDefault();var f=e.target;

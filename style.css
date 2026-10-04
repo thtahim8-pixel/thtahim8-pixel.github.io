@@ -134,3 +134,17 @@ dialog#login h3{margin-bottom:1rem;font-size:1.4rem}
 /* download button: visible to everyone */
 .item .dl{position:absolute;left:6px;bottom:6px;border:0;border-radius:999px;padding:.35rem .9rem;background:rgba(0,0,0,.72);color:#fff;font:700 .85rem "Bricolage Grotesque",sans-serif;cursor:pointer}
 .item .dl:hover{background:var(--pop);color:#111}
+
+/* software section */
+.adminonly{display:none}
+body.admin .adminonly{display:grid}
+.swintro{color:var(--soft);margin:0 0 1.5rem}
+#swform{max-width:520px;margin-bottom:2rem;padding:1.2rem;border:2px dashed var(--soft);border-radius:10px}
+#swform input[type=file]{background:transparent;color:var(--fg);border-style:dashed}
+.sw{list-style:none;margin:0;padding:0}
+.sw li{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:1rem;padding:1.2rem 0;border-bottom:2px dashed var(--soft)}
+.sw h3{font-size:clamp(1.3rem,3vw,1.9rem);margin-bottom:.2rem}
+.sw p{margin:0;color:var(--soft)}
+.sw .swacts{display:flex;gap:.6rem}
+.sw .swempty{color:var(--soft);border:0}
+.sw .btn.sm{padding:.45rem 1.2rem}
