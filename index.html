@@ -10,7 +10,7 @@
 <body>
 <nav><div class="wrap">
   <b>T H Tahim</b>
-  <a href="#home">Home</a><a href="#about">About</a><a href="#education">Education</a><a href="#skills">Skills</a><a href="#services">Services</a><a href="#projects">Projects</a><a href="#software">Software</a><a href="#contact">Contact</a><a class="btn fill sm" href="#contact">Hire Me</a>
+  <a href="#home">Home</a><a href="#about">About</a><a href="#education">Education</a><a href="#skills">Skills</a><a href="#services">Services</a><a href="#projects">Projects</a><a href="#/software">Software</a><a href="#contact">Contact</a><a class="btn fill sm" href="#contact">Hire Me</a>
 </div></nav>
 
 <main class="wrap">
@@ -84,14 +84,8 @@
 
   <section id="software">
     <h2>Software</h2>
-    <p class="swintro">Free software and tools. Click Download to get them.</p>
-    <form id="swform" class="adminonly">
-      <label class="f">Software name<input id="swn" required></label>
-      <label class="f">Short description<input id="swd"></label>
-      <label class="f">File<input id="swf" type="file" required></label>
-      <button class="btn fill" type="submit" id="swb">Upload software</button>
-    </form>
-    <ul class="sw" id="swlist"></ul>
+    <p class="swintro">Free software and tools. Open the Software page to see them and download.</p>
+    <div class="btns" style="margin-top:0"><a class="btn fill" href="#/software">Open Software page</a></div>
   </section>
 
   <section id="contact">
@@ -134,6 +128,35 @@
   </div>
 </div>
 
+
+<!-- Software page (opens from the Software link): list + Add software for admin -->
+<div class="pview" id="swpage" hidden>
+  <div class="wrap">
+    <a class="back" href="#software">&larr; Back to home</a>
+    <h1>Software</h1>
+    <p>Free software and tools. Click a software to see details and download it.</p>
+    <form id="swform" class="adminonly">
+      <label class="f">Software name<input id="swn" required></label>
+      <label class="f">Description<textarea id="swd" style="min-height:90px"></textarea></label>
+      <label class="f">Software file<input id="swf" type="file" required></label>
+      <label class="f">Cover image (shows on the card)<input id="swi" type="file" accept="image/*"></label>
+      <label class="f">Screenshots (optional, select many)<input id="sws" type="file" accept="image/*" multiple></label>
+      <button class="btn fill" type="submit" id="swb">Upload software</button>
+    </form>
+    <ul class="sw" id="swlist"></ul>
+  </div>
+</div>
+
+<!-- Software details page (opens when you click a software card) -->
+<div class="pview" id="swview" hidden>
+  <div class="wrap">
+    <a class="back" href="#/software">&larr; Back to software</a>
+    <h1 id="svTitle"></h1>
+    <p id="svDesc" style="white-space:pre-wrap"></p>
+    <div class="svbtns"><a class="btn fill" id="svDl" href="#">Download</a><span id="svSize"></span><button type="button" class="btn adminonly" id="svDel">Delete</button></div>
+    <div class="pgal" id="svGal"></div>
+  </div>
+</div>
 
 <dialog id="login"><form id="lf">
   <h3>Admin login</h3>
@@ -227,8 +250,17 @@ function openProject(key){
 }
 function closeProject(){curKey=null;pview.hidden=true;document.body.style.overflow="";showCovers();}
 function route(){
-  var m=location.hash.match(/^#\/(\w+)$/);
-  if(m&&PROJECTS[m[1]])openProject(m[1]);else if(!pview.hidden)closeProject();
+  var h=location.hash,m=h.match(/^#\/(\w+)$/),w=h.match(/^#\/sw\/(\d+)$/);
+  if(m&&PROJECTS[m[1]]){swview.hidden=true;swpage.hidden=true;curSW=null;openProject(m[1]);return;}
+  if(!pview.hidden)closeProject();
+  if(h==="#/software"||w){
+    if(swpage.hidden){swpage.hidden=false;swpage.scrollTop=0;}
+    if(w)openSW(Number(w[1]));else if(!swview.hidden)closeSW();
+    lock();
+  }else{
+    if(!swview.hidden)closeSW();
+    swpage.hidden=true;lock();
+  }
 }
 window.addEventListener("hashchange",route);
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!pview.hidden)location.hash="#projects";});
@@ -265,55 +297,98 @@ loadAll().then(function(){showCovers();route();});
 loadSW();
 
 
-// ---- software downloads (you upload, everyone downloads) ----
-var SWB="software-files",swRows=[];
+// ---- software (you upload, everyone views + downloads) ----
+var SWB="software-files",swRows=[],curSW=null;
+var swview=document.getElementById("swview"),swpage=document.getElementById("swpage"),svGal=document.getElementById("svGal");
+function lock(){document.body.style.overflow=(pview.hidden&&swpage.hidden&&swview.hidden)?"":"hidden";}
 function fmtSize(b){if(!b)return "";if(b<1048576)return Math.round(b/1024)+" KB";return (b/1048576).toFixed(1)+" MB";}
+function imgUrl(path){return sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;}
+function safeName(n){return n.replace(/[^A-Za-z0-9._-]/g,"_");}
 async function loadSW(){
   if(!sb)return;
   try{var r=await sb.from("software").select("*").order("id",{ascending:false});swRows=r.data||[];}catch(e){}
-  renderSW();
+  renderSW();route();
 }
 function renderSW(){
   var ul=document.getElementById("swlist");if(!ul)return;
   ul.innerHTML="";
   if(!swRows.length){var e=document.createElement("li");e.className="swempty";e.textContent="Software coming soon.";ul.appendChild(e);return;}
   swRows.forEach(function(row){
-    var li=document.createElement("li");
-    var box=document.createElement("div");
+    var li=document.createElement("li");li.className="swcard";
+    var a=document.createElement("a");a.href="#/sw/"+row.id;
+    var cov=document.createElement("div");cov.className="cov";
+    if(row.image_path){cov.style.backgroundImage='url("'+imgUrl(row.image_path)+'")';}else{cov.textContent="No image";}
     var h=document.createElement("h3");h.textContent=row.name;
-    var p=document.createElement("p");p.textContent=(row.description||"")+(row.size?" ("+fmtSize(row.size)+")":"");
-    box.appendChild(h);box.appendChild(p);
-    var acts=document.createElement("div");acts.className="swacts";
-    var d=document.createElement("a");d.className="btn fill sm";d.textContent="Download";
-    d.href=sb.storage.from(SWB).getPublicUrl(row.path,{download:row.filename}).data.publicUrl;
-    acts.appendChild(d);
+    var p=document.createElement("p");p.textContent=row.description||"";
+    var m=document.createElement("span");m.className="more";m.textContent="View & Download \u2192";
+    a.appendChild(cov);a.appendChild(h);a.appendChild(p);a.appendChild(m);
+    li.appendChild(a);
     if(isAdmin){
-      var x=document.createElement("button");x.type="button";x.className="btn sm";x.textContent="Delete";
-      x.addEventListener("click",async function(){
-        if(!confirm("Delete "+row.name+"?"))return;
-        await sb.storage.from(SWB).remove([row.path]);
-        await sb.from("software").delete().eq("id",row.id);
-        loadSW();
-      });
-      acts.appendChild(x);
+      var x=document.createElement("button");x.type="button";x.className="btn sm swdel";x.textContent="Delete";
+      x.addEventListener("click",function(){delSW(row);});
+      li.appendChild(x);
     }
-    li.appendChild(box);li.appendChild(acts);ul.appendChild(li);
+    ul.appendChild(li);
   });
 }
+async function delSW(row){
+  if(!isAdmin||!confirm("Delete "+row.name+"?"))return;
+  await sb.storage.from(SWB).remove([row.path]);
+  var imgs=(row.shots||[]).slice();if(row.image_path)imgs.push(row.image_path);
+  if(imgs.length)await sb.storage.from(BUCKET).remove(imgs);
+  await sb.from("software").delete().eq("id",row.id);
+  if(location.hash.indexOf("#/sw/")===0)location.hash="#/software";
+  loadSW();
+}
+function openSW(id){
+  var row=null;swRows.forEach(function(r){if(r.id===id)row=r;});
+  if(!row)return;
+  curSW=row;
+  document.getElementById("svTitle").textContent=row.name;
+  document.getElementById("svDesc").textContent=row.description||"";
+  document.getElementById("svSize").textContent=row.size?fmtSize(row.size):"";
+  document.getElementById("svDl").href=sb.storage.from(SWB).getPublicUrl(row.path,{download:row.filename}).data.publicUrl;
+  svGal.innerHTML="";
+  var list=[];if(row.image_path)list.push(row.image_path);(row.shots||[]).forEach(function(q){list.push(q);});
+  list.forEach(function(q){
+    var f=document.createElement("figure");f.className="item";
+    var img=document.createElement("img");img.alt=row.name;img.src=imgUrl(q);
+    img.addEventListener("click",function(){window.open(img.src,"_blank");});
+    f.appendChild(img);svGal.appendChild(f);
+  });
+  swview.hidden=false;swview.scrollTop=0;document.body.style.overflow="hidden";
+}
+function closeSW(){swview.hidden=true;curSW=null;lock();}
+document.getElementById("svDel").addEventListener("click",function(){if(curSW)delSW(curSW);});
+document.addEventListener("keydown",function(e){if(e.key!=="Escape")return;if(!swview.hidden)location.hash="#/software";else if(!swpage.hidden)location.hash="#software";});
 document.getElementById("swform").addEventListener("submit",async function(e){
   e.preventDefault();
   if(!isAdmin||!sb)return;
-  var f=document.getElementById("swf").files[0];if(!f)return;
+  var form=e.target,f=document.getElementById("swf").files[0];if(!f)return;
   var btn=document.getElementById("swb");btn.disabled=true;btn.textContent="Uploading...";
-  var safe=f.name.replace(/[^A-Za-z0-9._-]/g,"_");
-  var path=Date.now()+"-"+Math.random().toString(36).slice(2,8)+"-"+safe;
-  var up=await sb.storage.from(SWB).upload(path,f,{contentType:f.type||"application/octet-stream"});
-  if(up.error){alert("Upload failed: "+up.error.message);}
-  else{
-    var ins=await sb.from("software").insert({name:document.getElementById("swn").value,description:document.getElementById("swd").value,path:path,filename:f.name,size:f.size});
-    if(ins.error){alert("Save failed: "+ins.error.message);}
-    else{e.target.reset();await loadSW();}
-  }
+  try{
+    var stamp=Date.now()+"-"+Math.random().toString(36).slice(2,8);
+    var path=stamp+"-"+safeName(f.name);
+    var up=await sb.storage.from(SWB).upload(path,f,{contentType:f.type||"application/octet-stream"});
+    if(up.error)throw up.error;
+    var cover=null,shots=[];
+    var ci=document.getElementById("swi").files[0];
+    if(ci){
+      var cp="software/"+stamp+"-cover-"+safeName(ci.name);
+      var u1=await sb.storage.from(BUCKET).upload(cp,ci,{contentType:ci.type});
+      if(u1.error)throw u1.error;cover=cp;
+    }
+    var ss=Array.prototype.slice.call(document.getElementById("sws").files);
+    for(var i=0;i<ss.length;i++){
+      btn.textContent="Uploading screenshots "+(i+1)+"/"+ss.length+"...";
+      var sp="software/"+stamp+"-s"+i+"-"+safeName(ss[i].name);
+      var u2=await sb.storage.from(BUCKET).upload(sp,ss[i],{contentType:ss[i].type});
+      if(u2.error)throw u2.error;shots.push(sp);
+    }
+    var ins=await sb.from("software").insert({name:document.getElementById("swn").value,description:document.getElementById("swd").value,path:path,filename:f.name,size:f.size,image_path:cover,shots:shots});
+    if(ins.error)throw ins.error;
+    form.reset();await loadSW();
+  }catch(err){alert("Upload failed: "+(err.message||err));}
   btn.disabled=false;btn.textContent="Upload software";
 });
 
