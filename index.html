@@ -114,7 +114,7 @@
   </section>
 </main>
 
-<footer><div class="wrap">© 2026 Tamijul Hossain Tahim. All Rights Reserved.<br>Designed &amp; Developed by T H Tahim. <br><a href="#" id="adm" style="color:#ff6a00;font-weight:700;font-size:1rem">Admin</a></div></footer>
+<footer><div class="wrap">© 2026 Tamijul Hossain Tahim. All Rights Reserved.<br>Designed &amp; Developed by T H Tahim. <a href="#" id="adm" style="color:#9a9a9a;font-size:.9rem;margin-left:.5rem">Admin</a></div></footer>
 
 <!-- Project page (opens on top of the site when you click a project's "Add image" box) -->
 <div class="pview" id="pview" hidden>
@@ -135,12 +135,13 @@
     <a class="back" href="#software">&larr; Back to home</a>
     <h1>Software</h1>
     <p>Free software and tools. Click a software to see details and download it.</p>
+    <div class="btns" style="margin:1rem 0 1.5rem"><button type="button" class="btn fill" id="swup">+ Upload software</button></div>
     <form id="swform" class="adminonly">
+      <h3>Upload new software</h3>
       <label class="f">Software name<input id="swn" required></label>
-      <label class="f">Description<textarea id="swd" style="min-height:90px"></textarea></label>
-      <label class="f">Software file<input id="swf" type="file" required></label>
-      <label class="f">Cover image (shows on the card)<input id="swi" type="file" accept="image/*"></label>
-      <label class="f">Screenshots (optional, select many)<input id="sws" type="file" accept="image/*" multiple></label>
+      <label class="f">Description (optional)<textarea id="swd" style="min-height:90px"></textarea></label>
+      <div class="f">Software file (people will download this)</div>
+      <label class="filebox" id="swfb"><span id="swfn">+ Choose software file (.exe, .zip, .apk ...)</span><input id="swf" type="file" required></label>
       <button class="btn fill" type="submit" id="swb">Upload software</button>
     </form>
     <ul class="sw" id="swlist"></ul>
@@ -176,7 +177,9 @@ var roles=["Web Developer","UI/UX Designer","Graphic Designer"],ri=0,rEl=documen
 setInterval(function(){ri=(ri+1)%roles.length;var s=document.createElement("span");s.textContent=roles[ri];rEl.replaceWith(s);s.id="role";rEl=s;},2000);
 
 var sb=null;
-try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);}catch(e){}
+// admin login lasts only while this tab is open: closing the tab/browser logs you out
+try{Object.keys(localStorage).forEach(function(k){if(k.indexOf("sb-")===0)localStorage.removeItem(k);});}catch(e){}
+try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{storage:window.sessionStorage,persistSession:true,autoRefreshToken:true}});}catch(e){}
 var cache={},isAdmin=false,curKey=null;
 var PROJECTS={
   portfolio:["Personal Portfolio Website","My own portfolio, designed and built from scratch."],
@@ -250,6 +253,7 @@ function openProject(key){
 }
 function closeProject(){curKey=null;pview.hidden=true;document.body.style.overflow="";showCovers();}
 function route(){
+  if(location.hash==="#admin"){history.replaceState(null,"",location.pathname+location.search);if(!isAdmin&&sb&&!dlg.open)dlg.showModal();return;}
   var h=location.hash,m=h.match(/^#\/(\w+)$/),w=h.match(/^#\/sw\/(\d+)$/);
   if(m&&PROJECTS[m[1]]){swview.hidden=true;swpage.hidden=true;curSW=null;openProject(m[1]);return;}
   if(!pview.hidden)closeProject();
@@ -317,19 +321,40 @@ function renderSW(){
     var li=document.createElement("li");li.className="swcard";
     var a=document.createElement("a");a.href="#/sw/"+row.id;
     var cov=document.createElement("div");cov.className="cov";
-    if(row.image_path){cov.style.backgroundImage='url("'+imgUrl(row.image_path)+'")';}else{cov.textContent="No image";}
+    if(row.image_path){cov.style.backgroundImage='url("'+imgUrl(row.image_path)+'")';}
+    else if(isAdmin){cov.textContent="+ Add image";cov.classList.add("addimg");cov.addEventListener("click",function(e){e.preventDefault();pickCover(row);});}
+    else{cov.textContent="No image";}
     var h=document.createElement("h3");h.textContent=row.name;
     var p=document.createElement("p");p.textContent=row.description||"";
     var m=document.createElement("span");m.className="more";m.textContent="View & Download \u2192";
     a.appendChild(cov);a.appendChild(h);a.appendChild(p);a.appendChild(m);
     li.appendChild(a);
     if(isAdmin){
+      var box2=document.createElement("div");box2.className="swadm";
+      if(row.image_path){
+        var c=document.createElement("button");c.type="button";c.className="btn sm swdel";c.textContent="Change image";
+        c.addEventListener("click",function(){pickCover(row);});box2.appendChild(c);
+      }
       var x=document.createElement("button");x.type="button";x.className="btn sm swdel";x.textContent="Delete";
-      x.addEventListener("click",function(){delSW(row);});
-      li.appendChild(x);
+      x.addEventListener("click",function(){delSW(row);});box2.appendChild(x);
+      li.appendChild(box2);
     }
     ul.appendChild(li);
   });
+}
+function pickCover(row){
+  var i=document.createElement("input");i.type="file";i.accept="image/*";
+  i.onchange=function(){setCover(row,i.files[0]);};i.click();
+}
+async function setCover(row,file){
+  if(!isAdmin||!file)return;
+  var cp="software/"+Date.now()+"-cover-"+safeName(file.name);
+  var u=await sb.storage.from(BUCKET).upload(cp,file,{contentType:file.type});
+  if(u.error){alert("Upload failed: "+u.error.message);return;}
+  var up=await sb.from("software").update({image_path:cp}).eq("id",row.id).select();
+  if(up.error||!up.data||!up.data.length){alert("Could not save the image. Please run the update SQL in Supabase first.");await sb.storage.from(BUCKET).remove([cp]);return;}
+  if(row.image_path)await sb.storage.from(BUCKET).remove([row.image_path]);
+  await loadSW();
 }
 async function delSW(row){
   if(!isAdmin||!confirm("Delete "+row.name+"?"))return;
@@ -365,31 +390,33 @@ document.getElementById("swform").addEventListener("submit",async function(e){
   e.preventDefault();
   if(!isAdmin||!sb)return;
   var form=e.target,f=document.getElementById("swf").files[0];if(!f)return;
-  var btn=document.getElementById("swb");btn.disabled=true;btn.textContent="Uploading...";
+  var btn=document.getElementById("swb");btn.disabled=true;btn.textContent="Uploading... please wait";
   try{
-    var stamp=Date.now()+"-"+Math.random().toString(36).slice(2,8);
-    var path=stamp+"-"+safeName(f.name);
+    var path=Date.now()+"-"+Math.random().toString(36).slice(2,8)+"-"+safeName(f.name);
     var up=await sb.storage.from(SWB).upload(path,f,{contentType:f.type||"application/octet-stream"});
     if(up.error)throw up.error;
-    var cover=null,shots=[];
-    var ci=document.getElementById("swi").files[0];
-    if(ci){
-      var cp="software/"+stamp+"-cover-"+safeName(ci.name);
-      var u1=await sb.storage.from(BUCKET).upload(cp,ci,{contentType:ci.type});
-      if(u1.error)throw u1.error;cover=cp;
-    }
-    var ss=Array.prototype.slice.call(document.getElementById("sws").files);
-    for(var i=0;i<ss.length;i++){
-      btn.textContent="Uploading screenshots "+(i+1)+"/"+ss.length+"...";
-      var sp="software/"+stamp+"-s"+i+"-"+safeName(ss[i].name);
-      var u2=await sb.storage.from(BUCKET).upload(sp,ss[i],{contentType:ss[i].type});
-      if(u2.error)throw u2.error;shots.push(sp);
-    }
-    var ins=await sb.from("software").insert({name:document.getElementById("swn").value,description:document.getElementById("swd").value,path:path,filename:f.name,size:f.size,image_path:cover,shots:shots});
+    var ins=await sb.from("software").insert({name:document.getElementById("swn").value,description:document.getElementById("swd").value,path:path,filename:f.name,size:f.size});
     if(ins.error)throw ins.error;
-    form.reset();await loadSW();
+    form.reset();
+    document.getElementById("swfn").textContent="+ Choose software file (.exe, .zip, .apk ...)";
+    document.getElementById("swfb").classList.remove("has");
+    await loadSW();
+    alert("Software uploaded! Now click '+ Add image' on its card to add an image.");
   }catch(err){alert("Upload failed: "+(err.message||err));}
   btn.disabled=false;btn.textContent="Upload software";
+});
+
+
+
+document.getElementById("swf").addEventListener("change",function(){
+  var fb=document.getElementById("swfb"),f=this.files[0];
+  if(f){document.getElementById("swfn").textContent=f.name+" ("+fmtSize(f.size)+")";fb.classList.add("has");}
+  else{document.getElementById("swfn").textContent="+ Choose software file (.exe, .zip, .apk ...)";fb.classList.remove("has");}
+});
+
+document.getElementById("swup").addEventListener("click",function(){
+  if(!sb){alert("Supabase is not set up yet.");return;}
+  if(!isAdmin)dlg.showModal();
 });
 
 // contact form opens the visitor's email app
