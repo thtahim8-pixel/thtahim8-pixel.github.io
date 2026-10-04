@@ -1,4 +1,4 @@
-<!doctype html>
+                                                         <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -20,7 +20,7 @@
       <h1>Tamijul Hossain Tahim</h1>
       <p class="role" aria-live="polite"><span id="role">Web Developer</span></p>
       <p class="sub">I build modern websites, clear interfaces and creative digital content.</p>
-      <ul class="soc"><li><a href="https://www.facebook.com/share/19cw3ejY5U/" target="_blank" rel="noopener" aria-label="Facebook">f</a></li><li><a href="https://www.linkedin.com/in/tamijul-hossen-tahim-610a77385" target="_blank" rel="noopener" aria-label="LinkedIn">in</a></li><li><a href="https://wa.me/8801851154452" target="_blank" rel="noopener" aria-label="WhatsApp">wa</a></li><li><a href="https://www.behance.net/thtahim" target="_blank" rel="noopener" aria-label="Behance">Be</a></li></ul>
+      <ul class="soc"><li><a href="https://www.facebook.com/share/19cw3ejY5U/" target="_blank" rel="noopener" aria-label="Facebook">f</a></li><li><a href="https://www.linkedin.com/in/tamijul-hossen-tahim-610a77385" target="_blank" rel="noopener" aria-label="LinkedIn">in</a></li><li><a href="https://www.behance.net/thtahim" target="_blank" rel="noopener" aria-label="Behance">Be</a></li></ul>
       <div class="btns">
         <a class="btn fill" href="#contact">Hire Me</a>
         <a class="btn" href="#" id="cv">Download CV</a>
@@ -90,7 +90,6 @@
         <ul>
           <li>Email: <a href="mailto:you@example.com">Your Email</a></li>
           <li>Phone: <a href="tel:+8801851154425">01851154425</a></li>
-          <li>WhatsApp: <a href="https://wa.me/8801851154452" target="_blank" rel="noopener">01851154452</a></li>
           <li>Facebook: <a href="https://www.facebook.com/share/19cw3ejY5U/" target="_blank" rel="noopener">Tamijul Hossen Tahim</a></li>
           <li>LinkedIn: <a href="https://www.linkedin.com/in/tamijul-hossen-tahim-610a77385" target="_blank" rel="noopener">Tamijul Hossen Tahim</a></li>
           <li>Behance: <a href="https://www.behance.net/thtahim" target="_blank" rel="noopener">thtahim</a></li>
@@ -109,7 +108,7 @@
   </section>
 </main>
 
-<footer><div class="wrap">© 2026 Tamijul Hossain Tahim. All Rights Reserved.<br>Designed &amp; Developed by T H Tahim.</div></footer>
+<footer><div class="wrap">© 2026 Tamijul Hossain Tahim. All Rights Reserved.<br>Designed &amp; Developed by T H Tahim. <a href="#" id="adm" style="color:#777;font-size:.8rem;margin-left:.5rem">Admin</a></div></footer>
 
 <!-- Project page (opens on top of the site when you click a project's "Add image" box) -->
 <div class="pview" id="pview" hidden>
@@ -123,44 +122,27 @@
   </div>
 </div>
 
+
+<dialog id="login"><form id="lf">
+  <h3>Admin login</h3>
+  <label class="f">Email<input id="le" type="email" required></label>
+  <label class="f">Password<input id="lp" type="password" required></label>
+  <div class="btns" style="margin:0"><button class="btn fill" type="submit">Login</button><button class="btn" type="button" id="lc">Cancel</button></div>
+</form></dialog>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
+var SUPABASE_URL="https://qxxfuwqtzbizycioubsa.supabase.co";
+var SUPABASE_KEY="sb_publishable_41So5cLUVP1CW5TxGG6-wA_Da1TrvI3";
+var BUCKET="project-images";
 var EMAIL="you@example.com"; // put your real email here
+
 // profession lines, one after another every 2 seconds
 var roles=["Web Developer","UI/UX Designer","Graphic Designer"],ri=0,rEl=document.getElementById("role");
 setInterval(function(){ri=(ri+1)%roles.length;var s=document.createElement("span");s.textContent=roles[ri];rEl.replaceWith(s);s.id="role";rEl=s;},2000);
-// ---- saving project images in this browser (IndexedDB) ----
-var DB=null;
-function openDB(cb){
-  if(DB)return cb(DB);
-  try{
-    var r=indexedDB.open("tahim-portfolio",1);
-    r.onupgradeneeded=function(){var s=r.result.createObjectStore("imgs",{keyPath:"id",autoIncrement:true});s.createIndex("project","project");};
-    r.onsuccess=function(){DB=r.result;cb(DB);};
-    r.onerror=function(){cb(null);};
-  }catch(e){cb(null);}
-}
-function once(cb,fallback){var done=false;setTimeout(function(){fin(fallback);},2000);function fin(v){if(!done){done=true;cb(v);}}return fin;}
-function getImgs(project,cb){
-  var fin=once(cb,[]);
-  openDB(function(db){
-    if(!db)return fin([]);
-    var out=[],q=db.transaction("imgs").objectStore("imgs").index("project").openCursor(IDBKeyRange.only(project));
-    q.onsuccess=function(){var c=q.result;if(c){out.push(c.value);c.continue();}else fin(out);};
-    q.onerror=function(){fin([]);};
-  });
-}
-function addImg(project,blob,cb){
-  var fin=once(cb,null);
-  openDB(function(db){
-    if(!db)return fin(null);
-    var rq=db.transaction("imgs","readwrite").objectStore("imgs").add({project:project,blob:blob});
-    rq.onsuccess=function(){fin(rq.result);};
-    rq.onerror=function(){fin(null);};
-  });
-}
-function delImg(id){openDB(function(db){if(db)db.transaction("imgs","readwrite").objectStore("imgs").delete(id);});}
 
-// ---- project pages ----
+var sb=null;
+try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);}catch(e){}
+var cache={},isAdmin=false,curKey=null;
 var PROJECTS={
   portfolio:["Personal Portfolio Website","My own portfolio, designed and built from scratch."],
   uiux:["UI/UX Design Projects","App and website screens designed in Figma."],
@@ -170,33 +152,66 @@ var PROJECTS={
   web:["Web Development Projects","Websites built with HTML, CSS, JavaScript and Bootstrap."],
   ai:["AI Creative Content","Images and content created with AI tools."]
 };
-var pview=document.getElementById("pview"),pgal=document.getElementById("pgal"),curKey=null;
+var pview=document.getElementById("pview"),pgal=document.getElementById("pgal");
 var addInp=pgal.querySelector(".addbox input");
-function addItem(blob){
+
+function pubUrl(path){return sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;}
+async function loadAll(){
+  cache={};if(!sb)return;
+  try{
+    var r=await sb.from("images").select("*").order("id");
+    (r.data||[]).forEach(function(x){(cache[x.project]=cache[x.project]||[]).push(x);});
+  }catch(e){}
+}
+function addItem(row){
   var f=document.createElement("figure");f.className="item";
-  var img=document.createElement("img");img.alt="Project image";img.src=URL.createObjectURL(blob);
+  var img=document.createElement("img");img.alt="Project image";img.src=pubUrl(row.path);
   var x=document.createElement("button");x.type="button";x.className="x";x.title="Remove";x.textContent="\u00d7";
   img.addEventListener("click",function(){window.open(img.src,"_blank");});
-  x.addEventListener("click",function(){if(f.dataset.id)delImg(Number(f.dataset.id));f.remove();});
-  f.appendChild(img);f.appendChild(x);pgal.appendChild(f);return f;
+  x.addEventListener("click",async function(){
+    if(!isAdmin||!confirm("Delete this image?"))return;
+    await sb.storage.from(BUCKET).remove([row.path]);
+    await sb.from("images").delete().eq("id",row.id);
+    cache[row.project]=(cache[row.project]||[]).filter(function(r){return r.id!==row.id;});
+    f.remove();showCovers();
+  });
+  var d=document.createElement("button");d.type="button";d.className="dl";d.textContent="Download";
+  d.addEventListener("click",async function(e){
+    e.stopPropagation();
+    try{
+      var b=await (await fetch(img.src)).blob();
+      var a=document.createElement("a");a.href=URL.createObjectURL(b);
+      a.download=row.path.split("/").pop();document.body.appendChild(a);a.click();a.remove();
+    }catch(err){window.open(img.src,"_blank");}
+  });
+  f.appendChild(img);f.appendChild(x);f.appendChild(d);pgal.appendChild(f);
 }
-function saveFiles(key,files){
-  var f=files.shift();if(!f)return;
-  var item=(curKey===key)?addItem(f):null;
-  addImg(key,f,function(id){if(item&&id!=null)item.dataset.id=id;saveFiles(key,files);});
+function renderProject(){
+  pgal.querySelectorAll(".item").forEach(function(n){n.remove();});
+  (cache[curKey]||[]).forEach(addItem);
 }
-addInp.addEventListener("change",function(){
-  var files=Array.prototype.slice.call(addInp.files||[]);
-  if(files.length&&curKey)saveFiles(curKey,files);
+addInp.addEventListener("change",async function(){
+  var key=curKey,files=Array.prototype.slice.call(addInp.files||[]);
   addInp.value="";
+  if(!isAdmin||!key)return;
+  for(var k=0;k<files.length;k++){
+    var f=files[k],ext=(f.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"");
+    var path=key+"/"+Date.now()+"-"+Math.random().toString(36).slice(2,8)+"."+ext;
+    var up=await sb.storage.from(BUCKET).upload(path,f,{contentType:f.type});
+    if(up.error){alert("Upload failed: "+up.error.message);break;}
+    var ins=await sb.from("images").insert({project:key,path:path}).select().single();
+    if(ins.error){alert("Save failed: "+ins.error.message);break;}
+    (cache[key]=cache[key]||[]).push(ins.data);
+    if(curKey===key)addItem(ins.data);
+    showCovers();
+  }
 });
 function openProject(key){
   curKey=key;
   document.getElementById("pvTitle").textContent=PROJECTS[key][0];
   document.getElementById("pvDesc").textContent=PROJECTS[key][1];
-  pgal.querySelectorAll(".item").forEach(function(n){n.remove();});
+  renderProject();
   pview.hidden=false;pview.scrollTop=0;document.body.style.overflow="hidden";
-  getImgs(key,function(list){if(curKey!==key)return;list.forEach(function(r){var it=addItem(r.blob);it.dataset.id=r.id;});});
 }
 function closeProject(){curKey=null;pview.hidden=true;document.body.style.overflow="";showCovers();}
 function route(){
@@ -205,17 +220,37 @@ function route(){
 }
 window.addEventListener("hashchange",route);
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!pview.hidden)location.hash="#projects";});
-// home page: first saved image shows as the cover of each "Add image" box
+
 function showCovers(){
   document.querySelectorAll(".pcard").forEach(function(c){
-    getImgs(c.dataset.key,function(list){
-      if(!list.length){c.style.backgroundImage="";c.classList.remove("has-cover");return;}
-      c.style.backgroundImage='url("'+URL.createObjectURL(list[0].blob)+'")';
-      c.classList.add("has-cover");
-    });
+    var list=cache[c.dataset.key]||[],sp=c.querySelector("span");
+    if(list.length){c.style.backgroundImage='url("'+pubUrl(list[0].path)+'")';c.classList.add("has-cover");}
+    else{c.style.backgroundImage="";c.classList.remove("has-cover");if(sp)sp.textContent=isAdmin?"Add image":"Coming soon";}
   });
 }
-showCovers();route();
+
+// ---- admin login (only you) ----
+var dlg=document.getElementById("login"),adm=document.getElementById("adm");
+function setAdmin(v){
+  isAdmin=v;document.body.classList.toggle("admin",v);
+  adm.textContent=v?"Logout":"Admin";showCovers();
+}
+adm.addEventListener("click",async function(e){
+  e.preventDefault();if(!sb)return alert("Supabase is not set up yet.");
+  if(isAdmin){await sb.auth.signOut();}else{dlg.showModal();}
+});
+document.getElementById("lc").addEventListener("click",function(){dlg.close();});
+document.getElementById("lf").addEventListener("submit",async function(e){
+  e.preventDefault();
+  var r=await sb.auth.signInWithPassword({email:document.getElementById("le").value,password:document.getElementById("lp").value});
+  if(r.error)alert("Login failed: "+r.error.message);else{dlg.close();document.getElementById("lp").value="";}
+});
+if(sb){
+  sb.auth.getSession().then(function(r){setAdmin(!!(r.data&&r.data.session));});
+  sb.auth.onAuthStateChange(function(_e,session){setAdmin(!!session);});
+}
+loadAll().then(function(){showCovers();route();});
+
 // contact form opens the visitor's email app
 document.getElementById("msg").addEventListener("submit",function(e){e.preventDefault();var f=e.target;
   var body="Name: "+f.n.value+"\nEmail: "+f.e.value+"\n\n"+f.m.value;
