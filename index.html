@@ -141,7 +141,8 @@
       <label class="f">Software name<input id="swn" required></label>
       <label class="f">Description (optional)<textarea id="swd" style="min-height:90px"></textarea></label>
       <div class="f">Software file (people will download this)</div>
-      <label class="filebox" id="swfb"><span id="swfn">+ Choose software file (.exe, .zip, .apk ...)</span><input id="swf" type="file" required></label>
+      <label class="filebox" id="swfb"><span id="swfn">+ Choose software file (.exe, .zip, .apk ...)</span><input id="swf" type="file"></label>
+      <label class="f">Or paste a download link (for big files: Google Drive, Mega...)<input id="swl" type="url" placeholder="https://..."></label>
       <button class="btn fill" type="submit" id="swb">Upload software</button>
     </form>
     <ul class="sw" id="swlist"></ul>
@@ -358,7 +359,7 @@ async function setCover(row,file){
 }
 async function delSW(row){
   if(!isAdmin||!confirm("Delete "+row.name+"?"))return;
-  await sb.storage.from(SWB).remove([row.path]);
+  if(row.path)await sb.storage.from(SWB).remove([row.path]);
   var imgs=(row.shots||[]).slice();if(row.image_path)imgs.push(row.image_path);
   if(imgs.length)await sb.storage.from(BUCKET).remove(imgs);
   await sb.from("software").delete().eq("id",row.id);
@@ -372,7 +373,9 @@ function openSW(id){
   document.getElementById("svTitle").textContent=row.name;
   document.getElementById("svDesc").textContent=row.description||"";
   document.getElementById("svSize").textContent=row.size?fmtSize(row.size):"";
-  document.getElementById("svDl").href=sb.storage.from(SWB).getPublicUrl(row.path,{download:row.filename}).data.publicUrl;
+  var dl=document.getElementById("svDl");
+  if(row.link){dl.href=row.link;dl.target="_blank";dl.rel="noopener";}
+  else{dl.href=sb.storage.from(SWB).getPublicUrl(row.path,{download:row.filename}).data.publicUrl;dl.removeAttribute("target");}
   svGal.innerHTML="";
   var list=[];if(row.image_path)list.push(row.image_path);(row.shots||[]).forEach(function(q){list.push(q);});
   list.forEach(function(q){
@@ -389,19 +392,26 @@ document.addEventListener("keydown",function(e){if(e.key!=="Escape")return;if(!s
 document.getElementById("swform").addEventListener("submit",async function(e){
   e.preventDefault();
   if(!isAdmin||!sb)return;
-  var form=e.target,f=document.getElementById("swf").files[0];if(!f)return;
-  var btn=document.getElementById("swb");btn.disabled=true;btn.textContent="Uploading... please wait";
+  var form=e.target,f=document.getElementById("swf").files[0],link=document.getElementById("swl").value.trim();
+  if(!f&&!link){alert("Please choose a software file, or paste a download link.");return;}
+  if(!link&&f.size>50*1024*1024){alert("This file is bigger than 50 MB, so it cannot be uploaded here. Please upload it to Google Drive (Share: Anyone with the link) and paste that link in the link box.");return;}
+  var btn=document.getElementById("swb");btn.disabled=true;btn.textContent="Saving... please wait";
   try{
-    var path=Date.now()+"-"+Math.random().toString(36).slice(2,8)+"-"+safeName(f.name);
-    var up=await sb.storage.from(SWB).upload(path,f,{contentType:f.type||"application/octet-stream"});
-    if(up.error)throw up.error;
-    var ins=await sb.from("software").insert({name:document.getElementById("swn").value,description:document.getElementById("swd").value,path:path,filename:f.name,size:f.size});
+    var row={name:document.getElementById("swn").value,description:document.getElementById("swd").value};
+    if(link){row.link=link;}
+    else{
+      var path=Date.now()+"-"+Math.random().toString(36).slice(2,8)+"-"+safeName(f.name);
+      var up=await sb.storage.from(SWB).upload(path,f,{contentType:f.type||"application/octet-stream"});
+      if(up.error)throw up.error;
+      row.path=path;row.filename=f.name;row.size=f.size;
+    }
+    var ins=await sb.from("software").insert(row);
     if(ins.error)throw ins.error;
     form.reset();
     document.getElementById("swfn").textContent="+ Choose software file (.exe, .zip, .apk ...)";
     document.getElementById("swfb").classList.remove("has");
     await loadSW();
-    alert("Software uploaded! Now click '+ Add image' on its card to add an image.");
+    alert("Software added! Now click '+ Add image' on its card to add an image.");
   }catch(err){alert("Upload failed: "+(err.message||err));}
   btn.disabled=false;btn.textContent="Upload software";
 });
