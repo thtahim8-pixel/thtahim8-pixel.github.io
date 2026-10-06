@@ -1,4 +1,4 @@
-:root{--bg:#121212;--fg:#f2f2f2;--soft:#9a9a9a;--paper:#fffdf0;--pop:#ff6a00;--btn:#ff6a00;--btnfg:#111;
+:root{--bg:#121212;--fg:#f2f2f2;--soft:#9a9a9a;--paper:#fffdf0;--pop:#ff6a00;--btn:#ff6a00;--btnfg:#111;--ring:#ff6a00;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-behavior:smooth;scroll-padding-top:4.5rem}
 *{box-sizing:border-box}
@@ -32,7 +32,7 @@ h1{font-size:clamp(1.8rem,4.6vw,2.9rem);font-weight:800;line-height:1.1;margin:.
 .stats{display:flex;margin-top:2rem;background:#191919;border-radius:10px;padding:1rem 0;width:max-content;max-width:100%}
 .stats div{padding:0 1.4rem;border-left:1px solid #333}.stats div:first-child{border:0}
 .stats b{display:block;font:800 1.5rem/1.1 "Bricolage Grotesque",sans-serif;color:var(--pop)}.stats span{font:500 .9rem "Bricolage Grotesque",sans-serif}
-.circle{position:relative;width:min(100%,440px);aspect-ratio:1;border-radius:50%;background:#1d1d1d;justify-self:center;box-shadow:0 0 0 16px #171717}
+.circle{position:relative;width:min(100%,440px);aspect-ratio:1;border-radius:50%;background:#1d1d1d;justify-self:center;box-shadow:0 0 0 12px var(--bg)}
 section{padding:4.5rem 0;border-top:1px solid #2a2a2a}
 h2{font-size:clamp(2.1rem,6vw,3.8rem);letter-spacing:-.03em;line-height:1;margin:0 0 1.8rem;font-weight:800}
 h3{margin:0;font-weight:800;letter-spacing:-.02em}
@@ -73,7 +73,7 @@ footer{padding:2rem 0 3rem;font-size:.95rem;border-top:1px solid #2a2a2a}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.role span{animation:none}}
 
 /* images */
-.circle img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;background:#1d1d1d;filter:grayscale(1) contrast(1.05)}
+.circle img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;background:#1d1d1d;filter:saturate(1.08) contrast(1.03);transform:scale(1.23)}
 .portrait{margin:0}
 .portrait img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:6px;background:#1d1d1d}
 .gal > img{display:block;width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:6px;background:#1d1d1d}
@@ -201,3 +201,31 @@ body.admin .adminonly{display:grid}
 
 /* Upload software button: hidden once admin is logged in (form is shown instead) */
 body.admin #swup{display:none}
+
+/* color-changing ring around the hero photo */
+.circle::before,.circle::after{content:"";position:absolute;inset:-19px;border-radius:50%;background:conic-gradient(#ff6a00,#f2c94c,#27ae60,#2f80ed,#9b51e0,#ff2d95,#ff6a00);animation:ringspin 5s linear infinite;z-index:-1;pointer-events:none}
+.circle::before{-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 6px),#000 calc(100% - 5px));mask:radial-gradient(farthest-side,transparent calc(100% - 6px),#000 calc(100% - 5px))}
+.circle::after{filter:blur(28px);opacity:.35;z-index:-2}
+@keyframes ringspin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.circle::before,.circle::after{animation:none}}
+
+/* nicer hero photo: colour photo fills the circle, thicker ring, soft floating */
+.circle .ph{position:absolute;inset:0;border-radius:50%;overflow:hidden;background:#1d1d1d}
+.circle{box-shadow:0 0 0 10px var(--bg)}
+.circle::before{-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 8px),#000 calc(100% - 7px));mask:radial-gradient(farthest-side,transparent calc(100% - 8px),#000 calc(100% - 7px))}
+.circle::before,.circle::after{inset:-18px}
+.circle::after{opacity:.45;filter:blur(32px)}
+@keyframes floaty{0%,100%{translate:0 0}50%{translate:0 -10px}}
+@media(prefers-reduced-motion:reduce){.circle{animation:none}}
+
+/* final: still (no movement) beautiful gradient ring */
+.circle{box-shadow:0 0 0 10px var(--bg);outline:1px solid rgba(255,255,255,.14);outline-offset:30px}
+.circle::before,.circle::after{animation:none;transform:rotate(-35deg);background:conic-gradient(#ff6a00,#ff2d95,#9b51e0,#2f80ed,#27c6a5,#f2c94c,#ff6a00)}
+.circle::after{opacity:.38;filter:blur(30px)}
+
+/* colours change smoothly, the ring itself stays still */
+.circle::before{animation:ringhue 6s linear infinite}
+.circle::after{animation:ringhue2 6s linear infinite}
+@keyframes ringhue{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(360deg)}}
+@keyframes ringhue2{from{filter:blur(30px) hue-rotate(0deg)}to{filter:blur(30px) hue-rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.circle::before,.circle::after{animation:none}}

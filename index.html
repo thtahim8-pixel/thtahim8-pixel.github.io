@@ -28,7 +28,7 @@
       </div>
       <div class="stats"><div><b>10</b><span>Services</span></div><div><b>7</b><span>Project types</span></div><div><b>3</b><span>Creative roles</span></div></div>
     </div>
-    <div class="circle"><img src="file_00000000034082089af844d67bd55d23.png" alt="Tamijul Hossain Tahim"></div>
+    <div class="circle"><span class="ph"><img src="file_00000000034082089af844d67bd55d23.png" alt="Tamijul Hossain Tahim"></span></div>
   </header>
 
   <section id="about">
@@ -374,7 +374,15 @@ function openSW(id){
   document.getElementById("svDesc").textContent=row.description||"";
   document.getElementById("svSize").textContent=row.size?fmtSize(row.size):"";
   var dl=document.getElementById("svDl");
-  if(row.link){dl.href=row.link;dl.target="_blank";dl.rel="noopener";}
+  if(row.link){
+    var dd=driveDirect(row.link);
+    if(dd){dl.href=dd;dl.removeAttribute("target");}
+    else{
+      dl.href=row.link;
+      if(/\/releases\/download\/|\.(zip|exe|msi|apk|dmg|rar|7z|iso|pkg|deb)(\?|$)/i.test(row.link)){dl.removeAttribute("target");}
+      else{dl.target="_blank";dl.rel="noopener";}
+    }
+  }
   else{dl.href=sb.storage.from(SWB).getPublicUrl(row.path,{download:row.filename}).data.publicUrl;dl.removeAttribute("target");}
   svGal.innerHTML="";
   var list=[];if(row.image_path)list.push(row.image_path);(row.shots||[]).forEach(function(q){list.push(q);});
@@ -386,6 +394,10 @@ function openSW(id){
   });
   swview.hidden=false;swview.scrollTop=0;document.body.style.overflow="hidden";
 }
+function driveDirect(url){
+  var m=url.match(/drive\.google\.com\/file\/d\/([-\w]{10,})/)||url.match(/drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([-\w]{10,})/);
+  return m?"https://drive.usercontent.google.com/download?id="+m[1]+"&export=download&confirm=t":null;
+}
 function closeSW(){swview.hidden=true;curSW=null;lock();}
 document.getElementById("svDel").addEventListener("click",function(){if(curSW)delSW(curSW);});
 document.addEventListener("keydown",function(e){if(e.key!=="Escape")return;if(!swview.hidden)location.hash="#/software";else if(!swpage.hidden)location.hash="#software";});
@@ -394,6 +406,7 @@ document.getElementById("swform").addEventListener("submit",async function(e){
   if(!isAdmin||!sb)return;
   var form=e.target,f=document.getElementById("swf").files[0],link=document.getElementById("swl").value.trim();
   if(!f&&!link){alert("Please choose a software file, or paste a download link.");return;}
+  if(link&&link.indexOf("/folders/")>-1&&!confirm("This is a Google Drive FOLDER link. It will only open the folder, it cannot download automatically. For automatic download, put everything in one zip file, upload that zip to Drive and paste the FILE link. Continue with the folder link?"))return;
   if(!link&&f.size>50*1024*1024){alert("This file is bigger than 50 MB, so it cannot be uploaded here. Please upload it to Google Drive (Share: Anyone with the link) and paste that link in the link box.");return;}
   var btn=document.getElementById("swb");btn.disabled=true;btn.textContent="Saving... please wait";
   try{
